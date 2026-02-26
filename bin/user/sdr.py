@@ -3355,6 +3355,33 @@ class NexusTemperaturePacket(Packet):
             pkt['humidity'] = Packet.get_float(obj, 'humidity')
         return OS.insert_ids(pkt, NexusTemperaturePacket.__name__)
 
+class SainlogicSA8Packet(Packet):
+    # Sample data:
+    # {"time" : "2026-02-26 15:25:10", "model" : "Sainlogic-SA8", "id" : "abcd3fa1bc6c", "battery_ok" : 0, "counter" : 5526, "temperature_C" : 22.400, "humidity" : 80, "wind_avg_km_h" : 6.804, "wind_max_km_h" : 10.620, "wind_dir_deg" : 329, "rain_mm" : 193.879, "unknown" : 0, "flags" : 3903, "mic" : "CRC"}
+    # {"time" : "2026-02-26 15:30:09", "model" : "Sainlogic-SA8", "id" : "abcd3fa1bc6c", "battery_ok" : 0, "counter" : 5531, "temperature_C" : 22.400, "humidity" : 81, "wind_avg_km_h" : 0.000, "wind_max_km_h" : 0.000, "wind_dir_deg" : 61, "rain_mm" : 193.879, "unknown" : 0, "flags" : 3903, "mic" : "CRC"}
+    
+    IDENTIFIER = "Sainlogic-SA8"
+
+    @staticmethod
+    def parse_json(obj):
+        pkt = dict()
+        pkt['usUnits'] = weewx.METRICWX
+        pkt['dateTime'] = Packet.parse_time(obj.get('time'))
+        pkt['model'] = obj.get('model') # model = Sainlogic-SA8
+        sensor_id = obj.get('id', 'unk')
+        pkt['counter'] = obj.get('counter')
+        pkt['channel'] = obj.get('channel')
+        pkt['humidity'] = Packet.get_float(obj, 'humidity')
+        if 'temperature_F' in obj:
+            pkt['temperature'] = to_C(Packet.get_float(obj, 'temperature_F'))
+        elif 'temperature_C' in obj:
+            pkt['temperature'] = Packet.get_float(obj, 'temperature_C')
+        pkt['wind_gust'] = kmh_to_mps(Packet.get_float(obj, 'wind_max_km_h'))
+        pkt['wind_speed'] = kmh_to_mps(Packet.get_float(obj, 'wind_avg_km_h'))
+        pkt['wind_dir'] = Packet.get_float(obj, 'wind_dir_deg')
+        pkt['rain_total'] = Packet.get_float(obj, 'rain_mm')
+        pkt['battery'] = Packet.get_battery(obj)
+        return Packet.add_identifiers(pkt, sensor_id, SainlogicSA8Packet.__name__)
 
 class SpringfieldTMPacket(Packet):
     # {"time" : "2019-01-20 11:14:00", "model" : "Springfield Temperature & Moisture", "sid" : 224, "channel" : 3, "battery" : "OK", "transmit" : "MANUAL", "temperature_C" : -204.800, "moisture" : 0, "mic" : "CHECKSUM"}
